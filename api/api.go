@@ -11,6 +11,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+/*
+{
+	"from":"test@test.com",
+	"rcpt":"test@test.com",
+	"data":"hello \n ."
+}
+*/
+
 type Request struct {
 	From string
 	Rcpt string

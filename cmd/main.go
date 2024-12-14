@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	Env  string
 	Mode string // api/cli
 
 	SmtpUrl string
@@ -21,6 +22,10 @@ var (
 )
 
 const (
+	ENV_DEBUG = "ENV_DEBUG" //Для локального запуска в дебаг режиме
+	ENV_LOCAL = "ENV_LOCAL" //Для локального запуска
+	ENV_POD   = "ENV_POD"   //Для запуска в контейнере
+
 	SMTP_URL = "SMTP_URL" //from env
 
 	FLAG_MODE = "mode"
@@ -32,10 +37,20 @@ const (
 func init() {
 	logrus.SetFormatter(&logrus.TextFormatter{})
 
-	if err := godotenv.Load(); err != nil {
-		logrus.Warning("error while reading environment %s", err.Error())
+	Env = os.Getenv("ENV")
+	if Env == "" {
+		if err := godotenv.Load(); err != nil {
+			logrus.Warning("error while reading environment %s", err.Error())
+		}
 	}
 
+	Env = os.Getenv("ENV")
+	if Env == "" {
+		logrus.Warn("cant set environment, setting to local by default")
+		Env = ENV_LOCAL
+	}
+
+	logrus.Info("ENVIRONMENT IS " + Env)
 	SmtpUrl = os.Getenv(SMTP_URL)
 
 	loadFlags()
@@ -43,7 +58,7 @@ func init() {
 
 func main() {
 	client := s.NewClient(SmtpUrl)
-	if Mode == "api" {
+	if Env == ENV_POD || Mode == "api" {
 		logrus.Info("staring api server")
 
 		api := a.NewApi(client)
@@ -52,7 +67,9 @@ func main() {
 	} else {
 		logrus.Info("doing cli request")
 
-		client.Send(From, Rcpt, Data)
+		if err := client.Send(From, Rcpt, Data); err != nil {
+			logrus.Error(err)
+		}
 	}
 }
 
@@ -66,5 +83,7 @@ func loadFlags() {
 	logrus.Info(Mode)
 	logrus.Info(From)
 	logrus.Info(Rcpt)
-	logrus.Info(Mode)
+	logrus.Info(Data)
+
+	logrus.Info(SmtpUrl)
 }
